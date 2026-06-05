@@ -40,11 +40,7 @@ Host permissions (`host_permissions`) grant content script injection on `localho
 ## Development
 
 ```bash
-# Install (no dependencies required — pure vanilla JS)
-# Load the annnota/ folder as an unpacked extension
-
-# Run tests
-npm test
+# Load the annota/ folder as an unpacked extension
 ```
 
 
