@@ -1,0 +1,234 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 360px;
+  font-family: var(--annota-font-stack);
+  font-size: var(--annota-font-size-base);
+  line-height: 1.4;
+  background: var(--annota-surface);
+  color: var(--annota-text);
+}
+
+.state {
+  padding: var(--annota-space-xl);
+}
+
+.state-msg {
+  color: var(--annota-text-muted);
+  text-align: center;
+  padding: 24px 0;
+}
+
+.header {
+  padding: var(--annota-space-lg) var(--annota-space-xl);
+  border-bottom: 1px solid var(--annota-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--annota-space-md);
+}
+
+.header-path {
+  font-size: var(--annota-font-size-sm);
+  color: var(--annota-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.header-count {
+  font-size: var(--annota-font-size-xs);
+  color: var(--annota-text-tertiary);
+  white-space: nowrap;
+}
+
+.picking-banner {
+  padding: var(--annota-space-md) var(--annota-space-xl);
+  background: var(--annota-success-bg);
+  border-bottom: 1px solid var(--annota-success-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--annota-space-md);
+}
+
+.picking-label {
+  font-size: var(--annota-font-size-sm);
+  color: var(--annota-success-text);
+}
+
+.annotation-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.annotation-item {
+  padding: 10px var(--annota-space-xl);
+  border-bottom: 1px solid var(--annota-surface-elevated);
+  cursor: pointer;
+}
+
+.annotation-item:hover {
+  background: var(--annota-surface-list-hover);
+}
+
+.annotation-item-header {
+  display: flex;
+  align-items: center;
+  gap: var(--annota-space-md);
+}
+
+.annotation-number {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--annota-accent);
+  color: var(--annota-text-inverted);
+  font-size: var(--annota-font-size-xs);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.annotation-selector {
+  font-size: var(--annota-font-size-xs);
+  color: var(--annota-text-muted);
+  background: var(--annota-surface-elevated);
+  padding: var(--annota-space-2xs) var(--annota-space-xs);
+  border-radius: var(--annota-radius-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  font-family: var(--annota-font-mono);
+}
+
+.annotation-delete {
+  font-size: var(--annota-font-size-xs);
+  color: var(--annota-danger);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--annota-space-2xs) var(--annota-space-xs);
+  flex-shrink: 0;
+}
+
+.annotation-delete:hover {
+  text-decoration: underline;
+}
+
+.annotation-preview {
+  margin-top: var(--annota-space-sm);
+  padding-left: 28px;
+  font-size: var(--annota-font-size-sm);
+  color: var(--annota-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annotation-full {
+  margin-top: var(--annota-space-md);
+  padding-left: 28px;
+  font-size: var(--annota-font-size-sm);
+  color: var(--annota-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.footer {
+  padding: var(--annota-space-lg) var(--annota-space-xl);
+  border-top: 1px solid var(--annota-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--annota-space-md);
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: var(--annota-space-md) var(--annota-space-lg);
+  border: none;
+  border-radius: var(--annota-radius-md);
+  font-size: var(--annota-font-size-base);
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--annota-accent);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--annota-accent);
+  color: var(--annota-text-inverted);
+}
+
+.btn-primary:hover {
+  background: var(--annota-accent-hover);
+}
+
+.btn-secondary {
+  background: var(--annota-surface-elevated);
+  color: var(--annota-text);
+  border: 1px solid var(--annota-border);
+}
+
+.btn-secondary:hover {
+  background: var(--annota-surface-hover);
+}
+
+.btn-danger {
+  background: none;
+  color: var(--annota-text-tertiary);
+  font-size: var(--annota-font-size-sm);
+  padding: var(--annota-space-xs);
+}
+
+.btn-danger:hover {
+  color: var(--annota-danger);
+}
+
+.btn-sm {
+  padding: var(--annota-space-xs) 10px;
+  font-size: var(--annota-font-size-sm);
+}
+
+.btn-green {
+  background: var(--annota-success);
+  color: var(--annota-text-inverted);
+}
+
+.btn-green:hover {
+  background: var(--annota-success-hover);
+}
+
+.error-msg {
+  color: var(--annota-error);
+  font-size: var(--annota-font-size-sm);
+  text-align: center;
+  padding: var(--annota-space-md) 0;
+}
+
+.fallback-area {
+  width: 100%;
+  min-height: 120px;
+  background: var(--annota-surface-elevated);
+  color: var(--annota-text);
+  border: 1px solid var(--annota-border);
+  border-radius: var(--annota-radius-md);
+  padding: var(--annota-space-md);
+  font-family: var(--annota-font-mono);
+  font-size: var(--annota-font-size-xs);
+  resize: vertical;
+}

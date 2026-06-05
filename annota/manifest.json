@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "Annota",
+  "version": "0.1.0",
+  "description": "Pick DOM elements on localhost pages, attach feedback notes, and copy as structured Markdown.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": [
+    "http://localhost/*",
+    "https://localhost/*",
+    "http://127.0.0.1/*",
+    "https://127.0.0.1/*",
+    "http://*.local/*",
+    "https://*.local/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Annota"
+  },
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost/*",
+        "https://localhost/*",
+        "http://127.0.0.1/*",
+        "https://127.0.0.1/*",
+        "http://*.local/*",
+        "https://*.local/*"
+      ],
+      "js": [
+        "shared/chrome-storage-adapter.js",
+        "shared/chrome-messaging-adapter.js",
+        "shared/chrome-badge-adapter.js",
+        "shared/utils.js",
+        "content/target-normalizer.js",
+        "content/selector-generator.js",
+        "shared/annotations-storage.js",
+        "shared/observer.js",
+        "shared/annotation-store.js",
+        "content/popover-templates.js",
+        "content/popover-manager.js",
+        "content/badge-renderer.js",
+        "content/stale-validator.js",
+        "content/spa-detector.js",
+        "content/message-router.js",
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {}
+}
