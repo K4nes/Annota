@@ -148,7 +148,7 @@
         width: 100%; min-height: 36px; max-height: 200px; resize: none;
         background: var(--annota-surface-elevated); color: var(--annota-text); border: 1px solid var(--annota-border);
         border-radius: var(--annota-radius-md); padding: var(--annota-space-md); font: inherit; font-size: var(--annota-font-size-base);
-        line-height: 1.5;
+        line-height: 1.5; overflow: hidden; scrollbar-width: none;
       }
       .annota-popover-textarea:focus { outline: none; border-color: var(--annota-accent); }
       .annota-popover-existing {

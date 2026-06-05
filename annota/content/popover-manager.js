@@ -25,6 +25,7 @@
       textarea.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
           e.preventDefault();
+          e.stopPropagation();
         }
       });
       saveBtn.addEventListener('click', async () => {
