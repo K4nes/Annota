@@ -1,52 +1,56 @@
-(function () {
+(function() {
   'use strict';
 
-  const AFB = window.AFB = window.AFB || {};
   const RETRY_MS = 3000;
   const STALE_TEXT_THRESHOLD = 0.7;
 
   function create(deps) {
     const getAnnotations = deps.getAnnotations;
-    const setAnnotations = deps.setAnnotations;
     const getOpenPopoverAnnotationId = deps.getOpenPopoverAnnotationId;
     const retryMap = deps.retryMap;
-    const getPageKey = deps.getPageKey;
+    const deleteAnnotations = deps.deleteAnnotations;
     const onStaleRemoved = deps.onStaleRemoved;
     const onStaleError = deps.onStaleError;
     const getElementText = deps.getElementText;
-    const querySelectorSafe = deps.querySelectorSafe || AFB.selectorGenerator.querySelectorSafe;
-    const storage = deps.storage;
+    const querySelectorSafe = deps.querySelectorSafe || window.querySelectorSafe;
 
-    const v = {};
-
-    function textDifference(a, b) {
-      if (a === b) return 0;
-      const longer = a.length > b.length ? a : b;
-      const shorter = a.length > b.length ? b : a;
-      if (longer.length === 0) return 0;
-
-      let matches = 0;
-      const shorterLen = shorter.length;
-      for (let i = 0; i < shorterLen; i++) {
-        if (shorter[i] === longer[i]) matches++;
+    function levenshteinSimilarity(a, b) {
+      if (a === b) return 1.0;
+      const an = a.length;
+      const bn = b.length;
+      if (an === 0 || bn === 0) return 0.0;
+      const maxDist = Math.max(an, bn);
+      const matrix = [];
+      for (let i = 0; i <= bn; i++) matrix[i] = [i];
+      for (let j = 0; j <= an; j++) matrix[0][j] = j;
+      for (let i = 1; i <= bn; i++) {
+        for (let j = 1; j <= an; j++) {
+          const cost = a[j - 1] === b[i - 1] ? 0 : 1;
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j - 1] + cost
+          );
+        }
       }
-      return 1 - matches / longer.length;
+      return 1 - matrix[bn][an] / maxDist;
     }
 
-    v.textDifference = textDifference;
+    function normalizeText(str) {
+      return (str || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    }
 
-    v.validateCurrentPageAnnotations = async function () {
-      const annotations = getAnnotations();
-      if (annotations.length === 0) return;
+    const sv = {};
 
-      const stale = [];
+    sv.levenshteinSimilarity = levenshteinSimilarity;
+    sv.normalizeText = normalizeText;
+
+    sv.validateCurrentPageAnnotations = function() {
       const now = Date.now();
+      const staleIds = [];
 
-      for (const ann of annotations) {
-        if (ann.id === getOpenPopoverAnnotationId()) {
-          retryMap.delete(ann.id);
-          continue;
-        }
+      for (const ann of getAnnotations()) {
+        if (ann.id === getOpenPopoverAnnotationId()) continue;
 
         const el = querySelectorSafe(ann.selector);
 
@@ -56,7 +60,8 @@
             continue;
           }
           if (now - retryMap.get(ann.id) >= RETRY_MS) {
-            stale.push(ann);
+            staleIds.push(ann.id);
+            retryMap.delete(ann.id);
           }
           continue;
         }
@@ -69,47 +74,45 @@
             continue;
           }
           if (now - retryMap.get(ann.id + '_tag') >= RETRY_MS) {
-            stale.push(ann);
+            staleIds.push(ann.id);
             retryMap.delete(ann.id + '_tag');
           }
           continue;
         }
 
-        const currentText = getElementText(el);
-        const origText = ann.fingerprint.text || '';
-        if (origText.length > 0 && currentText.length > 0) {
-          const diff = textDifference(origText, currentText);
-          if (diff > STALE_TEXT_THRESHOLD) {
+        const storedText = normalizeText(ann.fingerprint.text);
+        const currentText = normalizeText(getElementText(el));
+        if (currentText && storedText) {
+          const sim = levenshteinSimilarity(storedText, currentText);
+          if (sim < STALE_TEXT_THRESHOLD) {
             if (!retryMap.has(ann.id + '_text')) {
               retryMap.set(ann.id + '_text', now);
               continue;
             }
             if (now - retryMap.get(ann.id + '_text') >= RETRY_MS) {
-              stale.push(ann);
+              staleIds.push(ann.id);
               retryMap.delete(ann.id + '_text');
             }
             continue;
           }
         }
+
+        retryMap.delete(ann.id + '_text');
+        retryMap.delete(ann.id + '_tag');
       }
 
-      if (stale.length > 0) {
-        const staleIds = new Set(stale.map((a) => a.id));
-        const remaining = getAnnotations().filter((a) => !staleIds.has(a.id));
-
-        try {
-          await storage.replace(getPageKey(), remaining);
-          setAnnotations(remaining);
-          if (onStaleRemoved) onStaleRemoved(stale.length);
-          ChromeAdapters.messaging.sendToBackground({ type: 'ANNOTATIONS_CHANGED' });
-        } catch {
-          if (onStaleError) onStaleError();
-        }
+      if (staleIds.length > 0) {
+        deleteAnnotations(staleIds).then(
+          () => onStaleRemoved(staleIds.length),
+          () => onStaleError()
+        );
       }
     };
 
-    return v;
+    return sv;
   }
 
-  AFB.staleValidator = { create, RETRY_MS, STALE_TEXT_THRESHOLD };
+  window.createStaleValidator = create;
+  window.RETRY_MS = RETRY_MS;
+  window.STALE_TEXT_THRESHOLD = STALE_TEXT_THRESHOLD;
 })();

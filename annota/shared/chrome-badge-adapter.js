@@ -1,7 +1,7 @@
-(function (globalScope) {
+(function () {
   'use strict';
 
-  const ChromeAdapters = (globalScope.ChromeAdapters = globalScope.ChromeAdapters || {});
+  const ChromeAdapters = (self.ChromeAdapters = self.ChromeAdapters || {});
 
   function setText(tabId, text) {
     return new Promise((resolve, reject) => {
@@ -47,4 +47,4 @@
       return setText(tabId, '');
     },
   };
-})(typeof window !== 'undefined' ? window : self);
+})();

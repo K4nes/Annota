@@ -118,10 +118,32 @@ body {
   cursor: pointer;
   padding: var(--annota-space-2xs) var(--annota-space-xs);
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
 }
 
 .annotation-delete:hover {
-  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.annotation-copy {
+  font-size: var(--annota-font-size-xs);
+  color: var(--annota-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--annota-space-2xs) var(--annota-space-xs);
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.annotation-copy:hover {
+  color: var(--annota-text);
+}
+
+.annotation-copy.copied {
+  color: var(--annota-success);
 }
 
 .annotation-preview {

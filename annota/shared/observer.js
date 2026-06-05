@@ -1,32 +1,37 @@
-(function (globalScope) {
+(function () {
   'use strict';
 
-  const AFB = (globalScope.AFB = globalScope.AFB || {});
-
   function createObserver() {
-    const subscribers = new Set();
+    const listeners = [];
+    let notifying = false;
+    const pending = [];
 
-    function subscribe(fn) {
-      subscribers.add(fn);
-      return function unsubscribe() {
-        subscribers.delete(fn);
-      };
-    }
-
-    function notify(value) {
-      for (const fn of subscribers) {
+    return {
+      subscribe(fn) {
+        listeners.push(fn);
+        return () => {
+          const idx = listeners.indexOf(fn);
+          if (idx !== -1) listeners.splice(idx, 1);
+        };
+      },
+      notify(data) {
+        if (notifying) { pending.push(data); return; }
+        notifying = true;
         try {
-          fn(value);
-        } catch {}
-      }
-    }
-
-    function size() {
-      return subscribers.size;
-    }
-
-    return { subscribe, notify, size };
+          for (const fn of listeners) {
+            try { fn(data); } catch { /* swallow subscriber errors */ }
+          }
+        } finally {
+          notifying = false;
+          if (pending.length > 0) {
+            const next = pending.shift();
+            this.notify(next);
+          }
+        }
+      },
+      size() { return listeners.length; },
+    };
   }
 
-  AFB.observer = { createObserver };
-})(typeof window !== 'undefined' ? window : self);
+  self.createObserver = createObserver;
+})();

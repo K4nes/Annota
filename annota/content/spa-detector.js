@@ -1,8 +1,6 @@
 (function() {
   'use strict';
 
-  const AFB = window.AFB = window.AFB || {};
-
   function create(deps) {
     const getLastUrl = deps.getLastUrl;
     const setLastUrl = deps.setLastUrl;
@@ -38,5 +36,5 @@
     return s;
   }
 
-  AFB.spaDetector = { create };
+  window.createSpaDetector = create;
 })();

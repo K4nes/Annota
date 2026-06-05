@@ -1,8 +1,7 @@
-(function (globalScope) {
+(function () {
   'use strict';
 
-  const AFB = (globalScope.AFB = globalScope.AFB || {});
-  const ChromeAdapters = globalScope.ChromeAdapters;
+  const ChromeAdapters = self.ChromeAdapters;
 
   function serializeMutate(readFn, replaceFn) {
     const queues = new Map();
@@ -60,9 +59,7 @@
     return { read, replace, mutate };
   }
 
-  AFB.annotationsStorage = {
-    ChromeAnnotationsStorage,
-    MemoryAnnotationsStorage,
-    serializeMutate,
-  };
-})(typeof window !== 'undefined' ? window : self);
+  self.serializeMutate = serializeMutate;
+  self.ChromeAnnotationsStorage = ChromeAnnotationsStorage;
+  self.MemoryAnnotationsStorage = MemoryAnnotationsStorage;
+})();

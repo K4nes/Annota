@@ -1,8 +1,7 @@
 (function() {
   'use strict';
 
-  const AFB = window.AFB = window.AFB || {};
-  const { escapeHtml } = AFB.utils;
+  const { escapeHtml } = window;
   const POPOVER_WIDTH = 360;
   const POPOVER_OFFSET = 12;
 
@@ -19,55 +18,20 @@
     const replaceAnnotation = deps.replaceAnnotation;
     const deleteAnnotationById = deps.deleteAnnotationById;
 
-    const mgr = {};
-
-    mgr.openNewPopover = function(el, x, y) {
-      setOpenPopoverAnnotationId(null);
-      const selector = generateSelector(el);
-      const text = getElementText(el);
-      const locatorHint = getLocatorHint(el);
-
-      popover.innerHTML = AFB.popoverTemplates.renderNewPopoverHTML();
-
-      mgr.positionPopover(x, y);
-      popover.style.display = 'block';
-      popover.classList.remove('annota-popover-instant');
-      requestAnimationFrame(() => popover.classList.add('annota-popover-open'));
-
-      const textarea = popover.querySelector('.annota-popover-textarea');
-      const saveBtn = popover.querySelector('.annota-popover-save');
-      const cancelBtn = popover.querySelector('.annota-popover-cancel');
-      const closeBtn = popover.querySelector('.annota-popover-close');
-      const errorEl = popover.querySelector('.annota-popover-error');
-
-      textarea.focus();
-      mgr.setupTextareaAutoGrow(textarea);
-
+    function setupSavePopover(textarea, saveBtn, errorEl, { onSave }) {
       textarea.addEventListener('input', () => {
         saveBtn.disabled = !textarea.value.trim();
       });
-
       textarea.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
           e.preventDefault();
-          if (!saveBtn.disabled) saveBtn.click();
         }
       });
-
       saveBtn.addEventListener('click', async () => {
         const feedback = textarea.value.trim();
         if (!feedback) return;
         try {
-          await saveAnnotation({
-            selector,
-            locatorHint,
-            tag: el.tagName.toLowerCase(),
-            elementSnippet: getElementSnippet(el),
-            text,
-            feedback,
-            viewport: { width: window.innerWidth, height: window.innerHeight },
-            fingerprint: getFingerprint(el),
-          });
+          await onSave(feedback);
           saveBtn.textContent = 'Saved';
           saveBtn.classList.remove('annota-btn-primary');
           saveBtn.classList.add('annota-btn-saved');
@@ -78,27 +42,61 @@
           errorEl.style.display = '';
         }
       });
+    }
 
-      cancelBtn.addEventListener('click', () => mgr.closePopover());
-      closeBtn.addEventListener('click', () => mgr.closePopover());
-    };
+    const mgr = {};
 
-    mgr.openExistingPopover = function(annotation, x, y) {
-      setOpenPopoverAnnotationId(annotation.id);
+    mgr.openNewPopover = function(el, x, y) {
+      setOpenPopoverAnnotationId(null);
+      const selector = generateSelector(el);
+      const text = getElementText(el);
+      const locatorHint = getLocatorHint(el);
 
-      popover.innerHTML = AFB.popoverTemplates.renderExistingPopoverHTML(annotation);
+      popover.innerHTML = window.renderNewPopoverHTML();
 
       mgr.positionPopover(x, y);
       popover.style.display = 'block';
       popover.classList.remove('annota-popover-instant');
       requestAnimationFrame(() => popover.classList.add('annota-popover-open'));
 
-      const cancelBtn = popover.querySelector('.annota-popover-cancel');
+      const textarea = popover.querySelector('.annota-popover-textarea');
+      const saveBtn = popover.querySelector('.annota-popover-save');
+      const closeBtn = popover.querySelector('.annota-popover-close');
+      const errorEl = popover.querySelector('.annota-popover-error');
+
+      textarea.focus();
+      mgr.setupTextareaAutoGrow(textarea);
+
+      setupSavePopover(textarea, saveBtn, errorEl, {
+        onSave: async (feedback) => saveAnnotation({
+          selector,
+          locatorHint,
+          tag: el.tagName.toLowerCase(),
+          elementSnippet: getElementSnippet(el),
+          text,
+          feedback,
+          viewport: { width: window.innerWidth, height: window.innerHeight },
+          fingerprint: getFingerprint(el),
+        }),
+      });
+
+      closeBtn.addEventListener('click', () => mgr.closePopover());
+    };
+
+    mgr.openExistingPopover = function(annotation, x, y) {
+      setOpenPopoverAnnotationId(annotation.id);
+
+      popover.innerHTML = window.renderExistingPopoverHTML(annotation);
+
+      mgr.positionPopover(x, y);
+      popover.style.display = 'block';
+      popover.classList.remove('annota-popover-instant');
+      requestAnimationFrame(() => popover.classList.add('annota-popover-open'));
+
       const closeBtn = popover.querySelector('.annota-popover-close');
       const deleteBtn = popover.querySelector('.annota-popover-delete');
       const replaceBtn = popover.querySelector('.annota-popover-replace');
 
-      cancelBtn.addEventListener('click', () => mgr.closePopover());
       closeBtn.addEventListener('click', () => mgr.closePopover());
 
       deleteBtn.addEventListener('click', () => {
@@ -112,11 +110,10 @@
     };
 
     mgr.openReplaceMode = function(annotation) {
-      popover.innerHTML = AFB.popoverTemplates.renderReplacePopoverHTML(annotation);
+      popover.innerHTML = window.renderReplacePopoverHTML(annotation);
 
       const textarea = popover.querySelector('.annota-popover-textarea');
       const saveBtn = popover.querySelector('.annota-popover-save');
-      const cancelBtn = popover.querySelector('.annota-popover-cancel');
       const closeBtn = popover.querySelector('.annota-popover-close');
       const errorEl = popover.querySelector('.annota-popover-error');
 
@@ -124,34 +121,10 @@
       textarea.setSelectionRange(textarea.value.length, textarea.value.length);
       mgr.setupTextareaAutoGrow(textarea);
 
-      textarea.addEventListener('input', () => {
-        saveBtn.disabled = !textarea.value.trim();
+      setupSavePopover(textarea, saveBtn, errorEl, {
+        onSave: async (feedback) => replaceAnnotation(annotation.id, feedback),
       });
 
-      textarea.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-          e.preventDefault();
-          if (!saveBtn.disabled) saveBtn.click();
-        }
-      });
-
-      saveBtn.addEventListener('click', async () => {
-        const feedback = textarea.value.trim();
-        if (!feedback) return;
-        try {
-          await replaceAnnotation(annotation.id, feedback);
-          saveBtn.textContent = 'Saved';
-          saveBtn.classList.remove('annota-btn-primary');
-          saveBtn.classList.add('annota-btn-saved');
-          saveBtn.disabled = true;
-          setTimeout(() => mgr.closePopover(true), 300);
-        } catch (err) {
-          errorEl.textContent = err.message || 'Could not save feedback. Try again.';
-          errorEl.style.display = '';
-        }
-      });
-
-      cancelBtn.addEventListener('click', () => mgr.closePopover());
       closeBtn.addEventListener('click', () => mgr.closePopover());
     };
 
@@ -193,7 +166,8 @@
     };
 
     mgr.setupTextareaAutoGrow = function(textarea) {
-      const baseHeight = 80;
+      textarea.style.resize = 'none';
+      textarea.style.minHeight = '36px';
       const maxHeight = 200;
       textarea.addEventListener('input', () => {
         textarea.style.height = 'auto';
@@ -204,5 +178,7 @@
     return mgr;
   }
 
-  AFB.popoverManager = { create, POPOVER_WIDTH, POPOVER_OFFSET };
+  window.createPopoverManager = create;
+  window.POPOVER_WIDTH = POPOVER_WIDTH;
+  window.POPOVER_OFFSET = POPOVER_OFFSET;
 })();

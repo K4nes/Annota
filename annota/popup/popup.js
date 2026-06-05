@@ -1,5 +1,13 @@
+const style = document.createElement('style');
+style.textContent = window.rootTokens();
+document.head.appendChild(style);
+
 const app = document.getElementById('app');
-const { pageKey, isDevUrl, escapeHtml } = window.AFB.utils;
+const { pageKey, isDevUrl, escapeHtml } = window;
+
+const CLIPBOARD_SVG = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="9" rx="1"/><path d="M4 2V1h4v1"/><path d="M2 5h8"/><path d="M2 7.5h8"/><path d="M2 10h5"/></svg>`;
+const CHECKMARK_SVG = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg>`;
+const TRASH_SVG = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h8"/><path d="M4 3V1.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V3"/><path d="M3.5 3v6.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5V3"/><path d="M5 5v3"/><path d="M7 5v3"/></svg>`;
 
 function getPagePath(url) {
   try {
@@ -21,6 +29,8 @@ function isRestrictedUrl(url) {
 }
 
 function renderEmpty() {
+  delete app.dataset.annotations;
+  delete app.dataset.pagePath;
   app.innerHTML = `
     <div class="state">
       <p class="state-msg">No feedback on this page yet.</p>
@@ -33,6 +43,8 @@ function renderEmpty() {
 
 function renderPicking(annotations, pagePath) {
   const count = annotations.length;
+  app.dataset.annotations = JSON.stringify(annotations);
+  app.dataset.pagePath = pagePath;
   app.innerHTML = `
     <div class="picking-banner">
       <span class="picking-label">Picking is active</span>
@@ -45,6 +57,8 @@ function renderPicking(annotations, pagePath) {
 
 function renderAnnotations(annotations, pagePath, picking) {
   const count = annotations.length;
+  app.dataset.annotations = JSON.stringify(annotations);
+  app.dataset.pagePath = pagePath;
   app.innerHTML = `
     <div class="header">
       <span class="header-path" title="${escapeHtml(pagePath)}">${escapeHtml(pagePath)}</span>
@@ -63,7 +77,8 @@ function renderList(annotations) {
           <div class="annotation-item-header">
             <span class="annotation-number">${i + 1}</span>
             <span class="annotation-selector" title="${escapeHtml(a.selector)}">${escapeHtml(truncate(a.selector, 30))}</span>
-            <button class="annotation-delete" data-id="${a.id}">Delete</button>
+            <button class="annotation-copy" data-id="${a.id}">${CLIPBOARD_SVG}</button>
+            <button class="annotation-delete" data-id="${a.id}">${TRASH_SVG}</button>
           </div>
           ${a.text ? `<div class="annotation-preview">${escapeHtml(truncate(a.text, 50))}</div>` : ''}
           <div class="annotation-preview">${escapeHtml(truncate(a.feedback, 60))}</div>
@@ -103,7 +118,10 @@ function renderPermissionMissing() {
 function renderNoContentScript() {
   app.innerHTML = `
     <div class="state">
-      <p class="state-msg">Could not connect to this page. Reload localhost app and try again.</p>
+      <p class="state-msg">Extension not connected. Reload the page to enable feedback.</p>
+    </div>
+    <div class="footer">
+      <button class="btn btn-primary" id="btn-reload">Reload page</button>
     </div>
   `;
 }
@@ -131,106 +149,70 @@ function renderClipboardFallback(text) {
   `;
 }
 
-function bindPopupEvents(annotations, pagePath, picking) {
-  const btnStop = document.getElementById('btn-stop');
-  if (btnStop) btnStop.addEventListener('click', stopPickMode);
-
-  const btnAdd = document.getElementById('btn-add');
-  if (btnAdd) btnAdd.addEventListener('click', startPickMode);
-
-  const btnRetry = document.getElementById('btn-retry');
-  if (btnRetry) btnRetry.addEventListener('click', init);
-
-  const btnSelectAll = document.getElementById('btn-select-all');
-  if (btnSelectAll) {
-    btnSelectAll.addEventListener('click', () => {
-      const ta = app.querySelector('.fallback-area');
-      ta.select();
-      document.execCommand('selectAll');
-    });
-  }
-
-  bindListEvents(annotations);
-  bindFooterEvents(annotations, pagePath, picking);
-}
-
-function bindListEvents(annotations) {
-  app.querySelectorAll('.annotation-item').forEach((el) => {
-    const id = el.dataset.id;
-    el.addEventListener('click', (e) => {
-      if (e.target.classList.contains('annotation-delete')) return;
-      const full = el.querySelector('.annotation-full');
-      const preview = el.querySelectorAll('.annotation-preview');
-      if (full.style.display === 'none') {
-        full.style.display = 'block';
-        preview.forEach((p) => (p.style.display = 'none'));
-      } else {
-        full.style.display = 'none';
-        preview.forEach((p) => (p.style.display = ''));
-      }
-    });
-  });
-
-  app.querySelectorAll('.annotation-delete').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      deleteAnnotation(btn.dataset.id);
-    });
-  });
-}
-
-function bindFooterEvents(annotations, pagePath, picking) {
-  const btnCopy = document.getElementById('btn-copy');
-  const btnAdd = document.getElementById('btn-add');
-  const btnClear = document.getElementById('btn-clear');
-
-  if (btnCopy) btnCopy.addEventListener('click', () => copyAll(annotations, pagePath));
-  if (btnAdd) btnAdd.addEventListener('click', startPickMode);
-  if (btnClear) btnClear.addEventListener('click', clearPage);
-}
-
-async function startPickMode() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  try {
-    await ChromeAdapters.messaging.sendToTab(tab.id, { type: 'START_PICK_MODE' });
-    window.close();
-  } catch {
-    renderNoContentScript();
+function toggleAnnotationExpand(item) {
+  const full = item.querySelector('.annotation-full');
+  const preview = item.querySelectorAll('.annotation-preview');
+  if (full.style.display === 'none') {
+    full.style.display = 'block';
+    preview.forEach((p) => (p.style.display = 'none'));
+  } else {
+    full.style.display = 'none';
+    preview.forEach((p) => (p.style.display = ''));
   }
 }
 
-async function stopPickMode() {
+app.addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+
+  if (btn.id === 'btn-stop') { stopPickMode(); return; }
+  if (btn.id === 'btn-add') { startPickMode(); return; }
+  if (btn.id === 'btn-retry') { init(); return; }
+  if (btn.id === 'btn-reload') { reloadTab(); return; }
+  if (btn.id === 'btn-select-all') {
+    const ta = app.querySelector('.fallback-area');
+    ta?.select();
+    return;
+  }
+  if (btn.id === 'btn-copy') { copyAll(); return; }
+  if (btn.id === 'btn-clear') { clearPage(); return; }
+  if (btn.classList.contains('annotation-copy')) { copySingle(btn.dataset.id); return; }
+  if (btn.classList.contains('annotation-delete')) { deleteAnnotation(btn.dataset.id); return; }
+  if (btn.closest('.annotation-item')) {
+    toggleAnnotationExpand(btn.closest('.annotation-item'));
+  }
+});
+
+async function sendToActiveTab(msg, onError) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  try {
-    await ChromeAdapters.messaging.sendToTab(tab.id, { type: 'STOP_PICK_MODE' });
-  } catch {}
-  init();
+  try { return await ChromeAdapters.messaging.sendToTab(tab.id, msg); }
+  catch (err) { if (onError) onError(err); return false; }
+  return true;
 }
 
-async function deleteAnnotation(id) {
+async function reloadTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  try {
-    await ChromeAdapters.messaging.sendToTab(tab.id, { type: 'DELETE_ANNOTATION', id });
-  } catch {}
-  init();
+  if (tab?.id) chrome.tabs.reload(tab.id);
+  window.close();
 }
 
-async function clearPage() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  try {
-    await ChromeAdapters.messaging.sendToTab(tab.id, { type: 'CLEAR_PAGE' });
-  } catch {}
-  init();
-}
+const startPickMode = async () => {
+  const ok = await sendToActiveTab({ type: 'START_PICK_MODE' }, renderNoContentScript);
+  if (ok) window.close();
+};
+const stopPickMode = async () => { await sendToActiveTab({ type: 'STOP_PICK_MODE' }); init(); };
+const deleteAnnotation = async (id) => { await sendToActiveTab({ type: 'DELETE_ANNOTATION', id }); init(); };
+const clearPage = async () => { await sendToActiveTab({ type: 'CLEAR_PAGE' }); init(); };
 
-async function copyAll(annotations, pagePath) {
+async function copyAll() {
+  const annotations = JSON.parse(app.dataset.annotations || '[]');
+  const pagePath = app.dataset.pagePath || '';
   const md = generateMarkdown(annotations, pagePath);
   try {
     await navigator.clipboard.writeText(md);
     showCopiedState();
   } catch {
     renderClipboardFallback(md);
-    bindPopupEvents(annotations, pagePath, false);
   }
 }
 
@@ -257,9 +239,6 @@ function generateMarkdown(annotations, pagePath) {
       md += `   Locator hint: ${a.locatorHint}\n`;
     }
     md += `   Element: ${a.elementSnippet || a.tag}\n`;
-    if (a.text) {
-      md += `   Text: ${a.text}\n`;
-    }
     md += `   Viewport: ${a.viewport.width}x${a.viewport.height}\n`;
     const feedbackLines = a.feedback.split('\n');
     md += `   Feedback: ${feedbackLines[0]}\n`;
@@ -274,6 +253,28 @@ function generateMarkdown(annotations, pagePath) {
 function truncate(str, max) {
   if (!str) return '';
   return str.length > max ? str.slice(0, max) + '...' : str;
+}
+
+async function copySingle(id) {
+  const annotations = JSON.parse(app.dataset.annotations || '[]');
+  const pagePath = app.dataset.pagePath || '';
+  const ann = annotations.find((a) => a.id === id);
+  if (!ann) return;
+  const md = generateMarkdown([ann], pagePath);
+  try {
+    await navigator.clipboard.writeText(md);
+    const btn = app.querySelector(`.annotation-copy[data-id="${id}"]`);
+    if (btn) {
+      btn.innerHTML = CHECKMARK_SVG;
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerHTML = CLIPBOARD_SVG;
+        btn.classList.remove('copied');
+      }, 1500);
+    }
+  } catch {
+    renderClipboardFallback(md);
+  }
 }
 
 async function init() {
@@ -313,25 +314,20 @@ async function init() {
       } catch (storageErr) {
         console.error('[popup] storage fallback failed:', storageErr);
         renderStorageError();
-        bindPopupEvents([], '', false);
         return;
       }
     }
 
     if (pickMode) {
       renderPicking(annotations, pagePath);
-      bindPopupEvents(annotations, pagePath, true);
     } else if (annotations.length === 0) {
       renderEmpty();
-      bindPopupEvents(annotations, pagePath, false);
     } else {
       renderAnnotations(annotations, pagePath, false);
-      bindPopupEvents(annotations, pagePath, false);
     }
   } catch (initErr) {
     console.error('[popup] init failed:', initErr);
     renderStorageError();
-    bindPopupEvents([], '', false);
   }
 }
 

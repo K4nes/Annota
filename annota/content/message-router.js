@@ -1,7 +1,6 @@
 (function() {
   'use strict';
 
-  const AFB = window.AFB = window.AFB || {};
   const ChromeAdapters = window.ChromeAdapters;
 
   function create(deps) {
@@ -46,5 +45,5 @@
     return { listener };
   }
 
-  AFB.messageRouter = { create };
+  window.createMessageRouter = create;
 })();

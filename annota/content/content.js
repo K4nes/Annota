@@ -1,11 +1,8 @@
 (() => {
   'use strict';
 
-  const AFB = window.AFB;
   const ChromeAdapters = window.ChromeAdapters;
-  const { normalizeTarget } = AFB.targetNormalizer;
-  const { getMeaningfulClasses } = AFB.selectorGenerator;
-  const { pageKey } = AFB.utils;
+  const { normalizeTarget, pageKey, getMeaningfulClasses } = window;
 
   const HOST_ID = '__annota-root__';
   const MAX_Z = '2147483647';
@@ -31,55 +28,14 @@
     badgePositions: [],
   };
 
+  let _selfWrite = false;
+
   let popoverManager, badgeRenderer, annotationStore, staleValidator, spaDetector;
 
   // ── Shadow DOM ──
 
   function getTokenDefinitions() {
-    return `
-      :host {
-        --annota-surface: #0f1115;
-        --annota-surface-elevated: #1e2330;
-        --annota-surface-hover: #252b3a;
-        --annota-surface-list-hover: #161a22;
-        --annota-border: #2a2f3a;
-        --annota-text: #f3f4f6;
-        --annota-text-inverted: #ffffff;
-        --annota-text-muted: #9ca3af;
-        --annota-text-secondary: #d1d5db;
-        --annota-text-tertiary: #6b7280;
-        --annota-accent: #3b82f6;
-        --annota-accent-hover: #2563eb;
-        --annota-accent-tint: rgba(59, 130, 246, 0.1);
-        --annota-success: #22c55e;
-        --annota-success-hover: #16a34a;
-        --annota-success-bg: #1a2e1a;
-        --annota-success-border: #2a3a2a;
-        --annota-success-text: #4ade80;
-        --annota-danger: #ef4444;
-        --annota-danger-tint: rgba(239, 68, 68, 0.1);
-        --annota-error: #f87171;
-        --annota-shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.3);
-        --annota-shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
-        --annota-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
-        --annota-space-2xs: 2px;
-        --annota-space-xs: 4px;
-        --annota-space-sm: 6px;
-        --annota-space-md: 8px;
-        --annota-space-lg: 12px;
-        --annota-space-xl: 16px;
-        --annota-radius-2xs: 3px;
-        --annota-radius-xs: 4px;
-        --annota-radius-sm: 5px;
-        --annota-radius-md: 6px;
-        --annota-radius-lg: 8px;
-        --annota-font-stack: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        --annota-font-mono: 'SF Mono', Monaco, Consolas, monospace;
-        --annota-font-size-base: 13px;
-        --annota-font-size-sm: 12px;
-        --annota-font-size-xs: 11px;
-      }
-    `;
+    return window.shadowTokens();
   }
 
   function createShadowDOM() {
@@ -162,7 +118,7 @@
       }
       .annota-popover {
         position: fixed; z-index: ${MAX_Z}; pointer-events: auto;
-        width: ${AFB.popoverManager.POPOVER_WIDTH}px; max-width: calc(100vw - 24px);
+        width: ${window.POPOVER_WIDTH}px; max-width: calc(100vw - 24px);
         background: var(--annota-surface); border: 1px solid var(--annota-border); border-radius: var(--annota-radius-lg);
         box-shadow: var(--annota-shadow-md);
         font: var(--annota-font-size-base)/1.4 var(--annota-font-stack);
@@ -189,7 +145,7 @@
       .annota-popover-close:focus-visible { outline: 2px solid var(--annota-accent); }
       .annota-popover-body { padding: var(--annota-space-lg); }
       .annota-popover-textarea {
-        width: 100%; min-height: 80px; max-height: 200px; resize: vertical;
+        width: 100%; min-height: 36px; max-height: 200px; resize: none;
         background: var(--annota-surface-elevated); color: var(--annota-text); border: 1px solid var(--annota-border);
         border-radius: var(--annota-radius-md); padding: var(--annota-space-md); font: inherit; font-size: var(--annota-font-size-base);
         line-height: 1.5;
@@ -221,7 +177,7 @@
       .annota-btn-saved { background: var(--annota-success); color: var(--annota-text-inverted); }
       .annota-badge {
         position: fixed; z-index: ${MAX_Z}; pointer-events: auto;
-        width: ${AFB.badgeRenderer.BADGE_SIZE}px; height: ${AFB.badgeRenderer.BADGE_SIZE}px; border-radius: 50%;
+        width: ${window.BADGE_SIZE}px; height: ${window.BADGE_SIZE}px; border-radius: 50%;
         background: var(--annota-accent); color: var(--annota-text-inverted);
         font: 600 var(--annota-font-size-xs)/1 var(--annota-font-stack);
         display: flex; align-items: center; justify-content: center;
@@ -313,7 +269,7 @@
     if (al) return `aria-label="${al}"`;
     const role = el.getAttribute('role');
     if (role) {
-      const rn = el.getAttribute('aria-label') || el.getAttribute('aria-labelledby');
+      const rn = al || el.getAttribute('aria-labelledby');
       if (rn) return `role="${role}" name="${rn}"`;
     }
 
@@ -395,6 +351,10 @@
     if (state.pickMode) return;
     state.pickMode = true;
     showTopBar();
+    const style = document.createElement('style');
+    style.id = '__annota-pick-cursor__';
+    style.textContent = '*,*::before,*::after{cursor:crosshair!important}';
+    document.head.appendChild(style);
     document.addEventListener('mouseover', onMouseOver, true);
     document.addEventListener('click', onClickCapture, true);
     document.addEventListener('keydown', onKeyDown, true);
@@ -404,6 +364,8 @@
   function stopPick() {
     if (!state.pickMode) return;
     state.pickMode = false;
+    const style = document.getElementById('__annota-pick-cursor__');
+    if (style) style.remove();
     state.currentTarget = null;
     hideTopBar();
     state.hoverHighlight.style.display = 'none';
@@ -498,32 +460,33 @@
     createShadowDOM();
     watchHostRemoval();
 
-    const annotationsStorage = AFB.annotationsStorage.ChromeAnnotationsStorage();
+    const annotationsStorage = window.ChromeAnnotationsStorage();
 
-    annotationStore = AFB.annotationStore.create({
+    annotationStore = window.createAnnotationStore({
       getAnnotations: () => state.annotations,
       setAnnotations: (v) => { state.annotations = v; },
       getPageKey: () => state.pageKey,
+      getLocatorHint,
       storage: annotationsStorage,
     });
 
     annotationStore.subscribe(syncUI);
 
-    popoverManager = AFB.popoverManager.create({
+    popoverManager = window.createPopoverManager({
       popover: state.popover,
       getOpenPopoverAnnotationId: () => state.openPopoverAnnotationId,
       setOpenPopoverAnnotationId: (v) => { state.openPopoverAnnotationId = v; },
-      generateSelector: AFB.selectorGenerator.generateSelector,
+      generateSelector: window.generateSelector,
       getElementText,
       getLocatorHint,
       getElementSnippet,
       getFingerprint,
-      saveAnnotation: (data) => annotationStore.saveAnnotation(data),
-      replaceAnnotation: (id, fb) => annotationStore.replaceAnnotation(id, fb),
-      deleteAnnotationById: (id) => annotationStore.deleteAnnotationById(id),
+      saveAnnotation: (data) => { _selfWrite = true; return annotationStore.saveAnnotation(data); },
+      replaceAnnotation: (id, fb) => { _selfWrite = true; return annotationStore.replaceAnnotation(id, fb); },
+      deleteAnnotationById: (id) => { _selfWrite = true; return annotationStore.deleteAnnotationById(id); },
     });
 
-    badgeRenderer = AFB.badgeRenderer.create({
+    badgeRenderer = window.createBadgeRenderer({
       badgeContainer: state.badgeContainer,
       getAnnotations: () => state.annotations,
       getBadgePositions: () => state.badgePositions,
@@ -531,13 +494,11 @@
       openExistingPopover: popoverManager.openExistingPopover,
     });
 
-    staleValidator = AFB.staleValidator.create({
+    staleValidator = window.createStaleValidator({
       getAnnotations: () => state.annotations,
-      setAnnotations: (v) => { state.annotations = v; },
       getOpenPopoverAnnotationId: () => state.openPopoverAnnotationId,
       retryMap: state.retryMap,
-      getPageKey: () => state.pageKey,
-      storage: annotationsStorage,
+      deleteAnnotations: (ids) => annotationStore.deleteAnnotationsByIds(ids),
       onStaleRemoved: (count) => {
         updateTopBarCount();
         badgeRenderer.renderBadges();
@@ -547,7 +508,7 @@
       getElementText,
     });
 
-    spaDetector = AFB.spaDetector.create({
+    spaDetector = window.createSpaDetector({
       getLastUrl: () => state.lastUrl,
       setLastUrl: (v) => { state.lastUrl = v; },
       onUrlChange: () => {
@@ -555,20 +516,20 @@
         if (state.pickMode) stopPick();
         state.retryMap.clear();
         loadAnnotations().then(() => {
-          setTimeout(() => staleValidator.validateCurrentPageAnnotations(), AFB.staleValidator.RETRY_MS);
+          setTimeout(() => staleValidator.validateCurrentPageAnnotations(), window.RETRY_MS);
         });
       },
     });
 
-    AFB.messageRouter.create({
+    window.createMessageRouter({
       onStartPickMode: startPick,
       onStopPickMode: stopPick,
       onGetState: () => ({
         pickMode: state.pickMode,
         annotations: [...state.annotations].sort((a, b) => a.createdAt - b.createdAt),
       }),
-      onDeleteAnnotation: (id) => annotationStore.deleteAnnotationById(id),
-      onClearPage: () => annotationStore.clearPageAnnotations(),
+      onDeleteAnnotation: (id) => { _selfWrite = true; return annotationStore.deleteAnnotationById(id); },
+      onClearPage: () => { _selfWrite = true; return annotationStore.clearPageAnnotations(); },
     });
 
     computePageKey();
@@ -577,6 +538,7 @@
     spaDetector.setupSPADetection();
 
     ChromeAdapters.storage.onChanged((pageKey, newList) => {
+      if (_selfWrite) { _selfWrite = false; return; }
       loadAnnotations().then(() => staleValidator.validateCurrentPageAnnotations());
     });
 

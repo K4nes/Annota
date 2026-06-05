@@ -1,7 +1,6 @@
 (function() {
   'use strict';
 
-  const AFB = window.AFB = window.AFB || {};
   const TN = {};
 
   TN.hasStableLocator = function(el) {
@@ -98,5 +97,5 @@
     return el;
   };
 
-  AFB.targetNormalizer = TN;
+  window.normalizeTarget = TN.normalizeTarget;
 })();

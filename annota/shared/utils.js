@@ -1,7 +1,5 @@
-(function (globalScope) {
+(function () {
   'use strict';
-
-  const AFB = (globalScope.AFB = {});
 
   function pageKey(url) {
     try {
@@ -25,11 +23,14 @@
     }
   }
 
+  let _escapeDiv;
   function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
+    if (!_escapeDiv) _escapeDiv = document.createElement('div');
+    _escapeDiv.textContent = str || '';
+    return _escapeDiv.innerHTML;
   }
 
-  AFB.utils = { pageKey, isDevUrl, escapeHtml };
-})(typeof window !== 'undefined' ? window : self);
+  self.pageKey = pageKey;
+  self.isDevUrl = isDevUrl;
+  self.escapeHtml = escapeHtml;
+})();

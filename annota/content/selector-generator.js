@@ -1,9 +1,6 @@
 (function() {
   'use strict';
 
-  const AFB = window.AFB = window.AFB || {};
-  const SG = {};
-
   const UTILITY_CLASS_RE = /^(p|m|w|h|min|max|flex|grid|gap|text|font|bg|border|rounded|shadow|opacity|overflow|absolute|relative|fixed|sticky|inline|block|hidden|visible|cursor|transition|duration|ease|delay|animate|transform|origin|scale|rotate|translate|skew|space|divide|self|place|items|content|order|grow|shrink|basis|col|row|auto|top|right|bottom|left|z)-/;
   const RESPONSIVE_RE = /^(sm|md|lg|xl|2xl):/;
   const STATE_RE = /^(hover|focus|active|visited|disabled|group-hover|dark):/;
@@ -24,15 +21,15 @@
     return withoutHash || base;
   }
 
-  SG.isUnique = function(selector) {
+  function isUnique(selector) {
     try {
       return document.querySelectorAll(selector).length === 1;
     } catch {
       return false;
     }
-  };
+  }
 
-  SG.getMeaningfulClasses = function(el) {
+  function getMeaningfulClasses(el) {
     if (!el.className || typeof el.className !== 'string') return [];
     const classes = [];
     const seen = new Set();
@@ -45,9 +42,9 @@
     });
 
     return classes;
-  };
+  }
 
-  SG.buildStructuralPath = function(el) {
+  function buildStructuralPath(el) {
     const parts = [];
     let cur = el;
     while (cur && cur !== document.body && cur !== document.documentElement) {
@@ -67,62 +64,64 @@
       cur = parent;
     }
     return parts.join(' > ');
-  };
+  }
 
-  SG.generateSelector = function(el) {
+  function generateSelector(el) {
     if (el.dataset.testid) {
       const s = `[data-testid="${CSS.escape(el.dataset.testid)}"]`;
-      if (SG.isUnique(s)) return s;
+      if (isUnique(s)) return s;
     }
 
     if (el.dataset.cy) {
       const s = `[data-cy="${CSS.escape(el.dataset.cy)}"]`;
-      if (SG.isUnique(s)) return s;
+      if (isUnique(s)) return s;
     }
 
     const ariaLabel = el.getAttribute('aria-label');
     if (ariaLabel) {
       const s = `${el.tagName.toLowerCase()}[aria-label="${CSS.escape(ariaLabel)}"]`;
-      if (SG.isUnique(s)) return s;
+      if (isUnique(s)) return s;
     }
 
     const role = el.getAttribute('role');
     if (role && ariaLabel) {
       const s = `[role="${CSS.escape(role)}"][aria-label="${CSS.escape(ariaLabel)}"]`;
-      if (SG.isUnique(s)) return s;
+      if (isUnique(s)) return s;
     }
 
     if (el.id) {
       const s = `#${CSS.escape(el.id)}`;
-      if (SG.isUnique(s)) return s;
+      if (isUnique(s)) return s;
     }
 
-    const meaningfulClasses = SG.getMeaningfulClasses(el);
+    const meaningfulClasses = getMeaningfulClasses(el);
     if (meaningfulClasses.length > 0) {
       const classSelector = meaningfulClasses.map((c) => `.${CSS.escape(c)}`).join('');
       const s = `${el.tagName.toLowerCase()}${classSelector}`;
-      if (SG.isUnique(s)) return s;
+      if (isUnique(s)) return s;
 
       if (el.parentElement) {
         const siblings = Array.from(el.parentElement.children).filter((c) => c.tagName === el.tagName);
         if (siblings.length > 1) {
           const idx = siblings.indexOf(el) + 1;
           const sw = `${s}:nth-of-type(${idx})`;
-          if (SG.isUnique(sw)) return sw;
+          if (isUnique(sw)) return sw;
         }
       }
     }
 
-    return SG.buildStructuralPath(el);
-  };
+    return buildStructuralPath(el);
+  }
 
-  SG.querySelectorSafe = function(selector) {
+  function querySelectorSafe(selector) {
     try {
       return document.querySelector(selector);
     } catch {
       return null;
     }
-  };
+  }
 
-  AFB.selectorGenerator = SG;
+  window.generateSelector = generateSelector;
+  window.getMeaningfulClasses = getMeaningfulClasses;
+  window.querySelectorSafe = querySelectorSafe;
 })();

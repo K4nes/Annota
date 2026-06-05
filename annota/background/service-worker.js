@@ -1,6 +1,6 @@
-importScripts('../shared/utils.js', '../shared/chrome-storage-adapter.js', '../shared/chrome-messaging-adapter.js', '../shared/chrome-badge-adapter.js', '../shared/annotations-storage.js', '../shared/observer.js');
+importScripts('../shared/utils.js', '../shared/chrome-storage-adapter.js', '../shared/chrome-messaging-adapter.js', '../shared/chrome-badge-adapter.js', '../shared/annotations-storage.js');
 
-const { pageKey, isDevUrl } = self.AFB.utils;
+const { pageKey, isDevUrl } = self;
 const TAB_BADGES = new Map();
 
 async function updateBadge(tabId, url, pickMode) {

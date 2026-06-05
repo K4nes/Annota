@@ -1,7 +1,6 @@
 (function() {
   'use strict';
 
-  const AFB = window.AFB = window.AFB || {};
   const BADGE_SIZE = 22;
   const BADGE_OFFSET = 6;
   const BADGE_COLLISION_STEP = 10;
@@ -43,7 +42,7 @@
     const getAnnotations = deps.getAnnotations;
     const setBadgePositions = deps.setBadgePositions;
     const openExistingPopover = deps.openExistingPopover;
-    const querySelectorSafe = deps.querySelectorSafe || AFB.selectorGenerator.querySelectorSafe;
+    const querySelectorSafe = deps.querySelectorSafe || window.querySelectorSafe;
 
     const r = {};
 
@@ -99,5 +98,9 @@
     return r;
   }
 
-  AFB.badgeRenderer = { create, calculateBadgePositions, BADGE_SIZE, BADGE_OFFSET, BADGE_COLLISION_STEP };
+  window.calculateBadgePositions = calculateBadgePositions;
+  window.createBadgeRenderer = create;
+  window.BADGE_SIZE = BADGE_SIZE;
+  window.BADGE_OFFSET = BADGE_OFFSET;
+  window.BADGE_COLLISION_STEP = BADGE_COLLISION_STEP;
 })();

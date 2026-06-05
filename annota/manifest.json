@@ -29,24 +29,7 @@
         "http://*.local/*",
         "https://*.local/*"
       ],
-      "js": [
-        "shared/chrome-storage-adapter.js",
-        "shared/chrome-messaging-adapter.js",
-        "shared/chrome-badge-adapter.js",
-        "shared/utils.js",
-        "content/target-normalizer.js",
-        "content/selector-generator.js",
-        "shared/annotations-storage.js",
-        "shared/observer.js",
-        "shared/annotation-store.js",
-        "content/popover-templates.js",
-        "content/popover-manager.js",
-        "content/badge-renderer.js",
-        "content/stale-validator.js",
-        "content/spa-detector.js",
-        "content/message-router.js",
-        "content/content.js"
-      ],
+      "js": ["content.bundle.js"],
       "run_at": "document_idle"
     }
   ],

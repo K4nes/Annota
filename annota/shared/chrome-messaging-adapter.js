@@ -1,7 +1,7 @@
-(function (globalScope) {
+(function () {
   'use strict';
 
-  const ChromeAdapters = (globalScope.ChromeAdapters = globalScope.ChromeAdapters || {});
+  const ChromeAdapters = (self.ChromeAdapters = self.ChromeAdapters || {});
 
   function sendWithResponse(fn, args) {
     return new Promise((resolve, reject) => {
@@ -34,4 +34,4 @@
       });
     },
   };
-})(typeof window !== 'undefined' ? window : self);
+})();
