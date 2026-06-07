@@ -28,7 +28,7 @@
     badgePositions: [],
   };
 
-  let _selfWrite = false;
+  let _selfWritePending = 0;
 
   let popoverManager, badgeRenderer, annotationStore, staleValidator, spaDetector;
 
@@ -269,7 +269,8 @@
     if (al) return `aria-label="${al}"`;
     const role = el.getAttribute('role');
     if (role) {
-      const rn = al || el.getAttribute('aria-labelledby');
+      const labelledBy = el.getAttribute('aria-labelledby');
+      const rn = al || (labelledBy && document.getElementById(labelledBy)?.textContent?.trim());
       if (rn) return `role="${role}" name="${rn}"`;
     }
 
@@ -481,9 +482,9 @@
       getLocatorHint,
       getElementSnippet,
       getFingerprint,
-      saveAnnotation: (data) => { _selfWrite = true; return annotationStore.saveAnnotation(data); },
-      replaceAnnotation: (id, fb) => { _selfWrite = true; return annotationStore.replaceAnnotation(id, fb); },
-      deleteAnnotationById: (id) => { _selfWrite = true; return annotationStore.deleteAnnotationById(id); },
+      saveAnnotation: (data) => { _selfWritePending++; return annotationStore.saveAnnotation(data); },
+      replaceAnnotation: (id, fb) => { _selfWritePending++; return annotationStore.replaceAnnotation(id, fb); },
+      deleteAnnotationById: (id) => { _selfWritePending++; return annotationStore.deleteAnnotationById(id); },
     });
 
     badgeRenderer = window.createBadgeRenderer({
@@ -528,8 +529,8 @@
         pickMode: state.pickMode,
         annotations: [...state.annotations].sort((a, b) => a.createdAt - b.createdAt),
       }),
-      onDeleteAnnotation: (id) => { _selfWrite = true; return annotationStore.deleteAnnotationById(id); },
-      onClearPage: () => { _selfWrite = true; return annotationStore.clearPageAnnotations(); },
+      onDeleteAnnotation: (id) => { _selfWritePending++; return annotationStore.deleteAnnotationById(id); },
+      onClearPage: () => { _selfWritePending++; return annotationStore.clearPageAnnotations(); },
     });
 
     computePageKey();
@@ -538,7 +539,7 @@
     spaDetector.setupSPADetection();
 
     ChromeAdapters.storage.onChanged((pageKey, newList) => {
-      if (_selfWrite) { _selfWrite = false; return; }
+      if (_selfWritePending > 0) { _selfWritePending--; return; }
       loadAnnotations().then(() => staleValidator.validateCurrentPageAnnotations());
     });
 

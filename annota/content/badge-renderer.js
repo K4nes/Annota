@@ -2,7 +2,7 @@
   'use strict';
 
   const BADGE_SIZE = 22;
-  const BADGE_OFFSET = 6;
+  const BADGE_OFFSET = 4;
   const BADGE_COLLISION_STEP = 10;
 
   function calculateBadgePositions(annotations, elements) {
@@ -14,8 +14,8 @@
       if (!el) continue;
 
       const rect = el.getBoundingClientRect();
-      let bx = rect.right - BADGE_SIZE / 2 + BADGE_OFFSET;
-      let by = rect.top - BADGE_SIZE / 2 - BADGE_OFFSET;
+      let bx = rect.right - BADGE_SIZE + BADGE_OFFSET;
+      let by = rect.top - BADGE_OFFSET;
 
       const vw = window.innerWidth;
       const vh = window.innerHeight;

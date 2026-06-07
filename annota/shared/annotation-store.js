@@ -38,7 +38,7 @@
       const idx = list.findIndex((a) => a.id === id);
       if (idx === -1) return list;
       const copy = list.slice();
-      copy[idx] = Object.assign({}, copy[idx], { feedback, createdAt: Date.now() });
+      copy[idx] = Object.assign({}, copy[idx], { feedback });
       return copy;
     }).then((r) => { invalidateCache(); return r; });
     store.deleteAnnotationById = async (id) => {

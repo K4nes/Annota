@@ -187,13 +187,18 @@ async function sendToActiveTab(msg, onError) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   try { return await ChromeAdapters.messaging.sendToTab(tab.id, msg); }
   catch (err) { if (onError) onError(err); return false; }
-  return true;
 }
 
 async function reloadTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab?.id) chrome.tabs.reload(tab.id);
-  window.close();
+  if (tab?.id) {
+    try {
+      await chrome.tabs.reload(tab.id);
+      window.close();
+    } catch {
+      renderNoContentScript();
+    }
+  }
 }
 
 const startPickMode = async () => {
