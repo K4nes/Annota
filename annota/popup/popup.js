@@ -41,16 +41,15 @@ function renderEmpty() {
   `;
 }
 
-function renderPicking(annotations, pagePath) {
+function renderDesignMode(annotations, pagePath) {
   const count = annotations.length;
   app.dataset.annotations = JSON.stringify(annotations);
   app.dataset.pagePath = pagePath;
   app.innerHTML = `
-    <div class="picking-banner">
-      <span class="picking-label">Picking is active</span>
-      <button class="btn btn-sm btn-secondary" id="btn-stop">Stop picking</button>
+    <div class="design-banner">
+      <span class="design-label">Design mode</span>
     </div>
-    ${count > 0 ? renderList(annotations, pagePath) : '<div class="state"><p class="state-msg">No feedback yet. Click elements on the page.</p></div>'}
+    ${count > 0 ? renderList(annotations, pagePath) : '<div class="state"><p class="state-msg">Click elements to add feedback.</p></div>'}
     ${count > 0 ? renderFooter(annotations, pagePath, true) : ''}
   `;
 }
@@ -89,12 +88,24 @@ function renderList(annotations) {
   `;
 }
 
-function renderFooter(annotations, pagePath, picking) {
+function renderFooter(annotations, pagePath, designMode) {
+  if (designMode) {
+    return `
+      <div class="footer">
+        <div class="footer-row">
+          <button class="btn btn-primary" id="btn-copy">Copy all</button>
+          <button class="btn btn-secondary" id="btn-clear">Clear</button>
+        </div>
+      </div>
+    `;
+  }
   return `
     <div class="footer">
-      <button class="btn btn-primary" id="btn-copy">Copy all</button>
-      ${!picking ? '<button class="btn btn-secondary" id="btn-add">Add feedback</button>' : ''}
-      <button class="btn btn-danger" id="btn-clear">Clear page</button>
+      <div class="footer-row">
+        <button class="btn btn-primary" id="btn-copy">Copy all</button>
+        <button class="btn btn-secondary" id="btn-clear">Clear</button>
+      </div>
+      <button class="btn btn-secondary" id="btn-add">Add feedback</button>
     </div>
   `;
 }
@@ -324,7 +335,7 @@ async function init() {
     }
 
     if (pickMode) {
-      renderPicking(annotations, pagePath);
+      renderDesignMode(annotations, pagePath);
     } else if (annotations.length === 0) {
       renderEmpty();
     } else {

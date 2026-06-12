@@ -56,6 +56,21 @@
     return null;
   };
 
+  TN.isStructuralContainer = function(el) {
+    if (el === document.body || el === document.documentElement) return false;
+    const structuralTags = ['SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'NAV', 'HEADER', 'FOOTER'];
+    if (structuralTags.includes(el.tagName)) return true;
+    if (el.tagName === 'DIV') {
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return false;
+      const vpArea = window.innerWidth * window.innerHeight;
+      if (vpArea === 0) return false;
+      const areaRatio = (rect.width * rect.height) / vpArea;
+      return areaRatio >= 0.01 && areaRatio <= 0.7;
+    }
+    return false;
+  };
+
   TN.normalizeTarget = function(el) {
     if (!el || el === document.documentElement || el === document.body) return el;
 
@@ -76,6 +91,7 @@
       if (TN.hasRoleOrAriaLabel(cur)) { best = cur; break; }
       if (TN.isTextBlock(cur)) { best = cur; break; }
       if (TN.isCardContainer(cur)) { best = cur; break; }
+      if (TN.isStructuralContainer(cur)) { best = cur; break; }
       cur = cur.parentElement;
     }
 

@@ -18,6 +18,9 @@
     const replaceAnnotation = deps.replaceAnnotation;
     const deleteAnnotationById = deps.deleteAnnotationById;
 
+    let lastPosX = 0;
+    let lastPosY = 0;
+
     function setupSavePopover(textarea, saveBtn, errorEl, { onSave }) {
       textarea.addEventListener('input', () => {
         saveBtn.disabled = !textarea.value.trim();
@@ -55,6 +58,8 @@
 
       popover.innerHTML = window.renderNewPopoverHTML();
 
+      lastPosX = x;
+      lastPosY = y;
       mgr.positionPopover(x, y);
       popover.style.display = 'block';
       popover.classList.remove('annota-popover-instant');
@@ -62,7 +67,7 @@
 
       const textarea = popover.querySelector('.annota-popover-textarea');
       const saveBtn = popover.querySelector('.annota-popover-save');
-      const closeBtn = popover.querySelector('.annota-popover-close');
+      const cancelBtn = popover.querySelector('.annota-popover-cancel');
       const errorEl = popover.querySelector('.annota-popover-error');
 
       textarea.focus();
@@ -81,7 +86,7 @@
         }),
       });
 
-      closeBtn.addEventListener('click', () => mgr.closePopover());
+      cancelBtn.addEventListener('click', () => mgr.closePopover());
     };
 
     mgr.openExistingPopover = function(annotation, x, y) {
@@ -89,16 +94,18 @@
 
       popover.innerHTML = window.renderExistingPopoverHTML(annotation);
 
+      lastPosX = x;
+      lastPosY = y;
       mgr.positionPopover(x, y);
       popover.style.display = 'block';
       popover.classList.remove('annota-popover-instant');
       requestAnimationFrame(() => popover.classList.add('annota-popover-open'));
 
-      const closeBtn = popover.querySelector('.annota-popover-close');
+      const cancelBtn = popover.querySelector('.annota-popover-cancel');
       const deleteBtn = popover.querySelector('.annota-popover-delete');
       const replaceBtn = popover.querySelector('.annota-popover-replace');
 
-      closeBtn.addEventListener('click', () => mgr.closePopover());
+      cancelBtn.addEventListener('click', () => mgr.closePopover());
 
       deleteBtn.addEventListener('click', () => {
         deleteAnnotationById(annotation.id);
@@ -115,7 +122,7 @@
 
       const textarea = popover.querySelector('.annota-popover-textarea');
       const saveBtn = popover.querySelector('.annota-popover-save');
-      const closeBtn = popover.querySelector('.annota-popover-close');
+      const cancelBtn = popover.querySelector('.annota-popover-cancel');
       const errorEl = popover.querySelector('.annota-popover-error');
 
       textarea.focus();
@@ -126,7 +133,9 @@
         onSave: async (feedback) => replaceAnnotation(annotation.id, feedback),
       });
 
-      closeBtn.addEventListener('click', () => mgr.closePopover());
+      cancelBtn.addEventListener('click', () => {
+        mgr.openExistingPopover(annotation, lastPosX, lastPosY);
+      });
     };
 
     mgr.closePopover = function(instant) {

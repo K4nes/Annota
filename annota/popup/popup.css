@@ -47,19 +47,20 @@ body {
   white-space: nowrap;
 }
 
-.picking-banner {
+.design-banner {
   padding: var(--annota-space-md) var(--annota-space-xl);
-  background: var(--annota-success-bg);
-  border-bottom: 1px solid var(--annota-success-border);
+  background: var(--annota-accent-tint);
+  border-bottom: 1px solid var(--annota-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--annota-space-md);
 }
 
-.picking-label {
+.design-label {
   font-size: var(--annota-font-size-sm);
-  color: var(--annota-success-text);
+  color: var(--annota-accent);
+  font-weight: 500;
 }
 
 .annotation-list {
@@ -173,6 +174,15 @@ body {
   gap: var(--annota-space-md);
 }
 
+.footer-row {
+  display: flex;
+  gap: var(--annota-space-md);
+}
+
+.footer-row .btn {
+  flex: 1;
+}
+
 .btn {
   display: block;
   width: 100%;
@@ -184,6 +194,11 @@ body {
   cursor: pointer;
   text-align: center;
   font-family: inherit;
+  transition: background 150ms ease, transform 80ms ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
 }
 
 .btn:focus-visible {
@@ -233,6 +248,28 @@ body {
 
 .btn-green:hover {
   background: var(--annota-success-hover);
+}
+
+.btn-done {
+  background: var(--annota-success);
+  color: var(--annota-text-inverted);
+  font-size: var(--annota-font-size-sm);
+  padding: var(--annota-space-xs) var(--annota-space-lg);
+}
+
+.btn-done:hover {
+  background: var(--annota-success-hover);
+}
+
+.btn-ghost-danger {
+  background: none;
+  color: var(--annota-text-tertiary);
+  font-size: var(--annota-font-size-sm);
+  padding: var(--annota-space-xs);
+}
+
+.btn-ghost-danger:hover {
+  color: var(--annota-danger);
 }
 
 .error-msg {

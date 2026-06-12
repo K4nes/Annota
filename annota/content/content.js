@@ -7,11 +7,19 @@
   const HOST_ID = '__annota-root__';
   const MAX_Z = '2147483647';
   const MUTATION_DEBOUNCE_MS = 500;
+  const CONTEXT_INVALIDATED_MSG = 'Extension context invalidated';
+
+  function safeSendToBackground(msg) {
+    return ChromeAdapters.messaging.sendToBackground(msg).catch((err) => {
+      if (err && err.message && err.message.includes(CONTEXT_INVALIDATED_MSG)) return;
+      throw err;
+    });
+  }
 
   const state = {
     shadowHost: null,
     shadowRoot: null,
-    topBar: null,
+    chip: null,
     hoverHighlight: null,
     popover: null,
     badgeContainer: null,
@@ -50,16 +58,17 @@
     style.textContent = getStyles();
     state.shadowRoot.appendChild(style);
 
-    state.topBar = document.createElement('div');
-    state.topBar.className = 'annota-topbar';
-    state.topBar.style.display = 'none';
-    state.topBar.innerHTML = `
-      <span class="annota-topbar-label">Pick element</span>
-      <span class="annota-topbar-count" style="display:none"></span>
-      <button class="annota-topbar-exit">Exit</button>
+    state.chip = document.createElement('div');
+    state.chip.className = 'annota-chip';
+    state.chip.style.display = 'none';
+    state.chip.innerHTML = `
+      <span class="annota-chip-label">Design mode</span>
+      <span class="annota-chip-count" style="display:none"></span>
+      <button class="annota-chip-done">Done</button>
     `;
-    state.topBar.querySelector('.annota-topbar-exit').addEventListener('click', stopPick);
-    state.shadowRoot.appendChild(state.topBar);
+    state.chip.querySelector('.annota-chip-done').addEventListener('click', stopPick);
+    setupChipDrag(state.chip);
+    state.shadowRoot.appendChild(state.chip);
 
     state.hoverHighlight = document.createElement('div');
     state.hoverHighlight.className = 'annota-highlight';
@@ -89,28 +98,32 @@
     return getTokenDefinitions() + `
       :host { all: initial; position: fixed; z-index: ${MAX_Z}; top: 0; left: 0; width: 0; height: 0; pointer-events: none; }
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      .annota-topbar {
+      .annota-chip {
         position: fixed; top: 12px; right: 12px; z-index: ${MAX_Z};
-        display: inline-flex; align-items: center; gap: 10px;
-        padding: var(--annota-space-sm) var(--annota-space-lg);
-        background: var(--annota-surface); border: 1px solid var(--annota-border); border-radius: var(--annota-radius-lg);
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 6px 12px;
+        background: var(--annota-surface); border: 1px solid var(--annota-border); border-radius: 20px;
         box-shadow: var(--annota-shadow-sm);
-        font: var(--annota-font-size-base)/1.4 var(--annota-font-stack);
+        font: var(--annota-font-size-sm)/1.4 var(--annota-font-stack);
         color: var(--annota-text); pointer-events: auto; white-space: nowrap;
-        opacity: 0.95; transition: opacity 150ms ease;
+        opacity: 0.9; transition: opacity 150ms ease;
+        cursor: grab; user-select: none;
       }
-      .annota-topbar:hover { opacity: 1; }
-      .annota-topbar-label { flex: 0 0 auto; }
-      .annota-topbar-count {
+      .annota-chip:hover { opacity: 1; }
+      .annota-chip:active { cursor: grabbing; }
+      .annota-chip-label { font-weight: 500; }
+      .annota-chip-count {
         font-size: var(--annota-font-size-xs); background: var(--annota-accent); color: var(--annota-text-inverted);
-        padding: var(--annota-space-2xs) var(--annota-space-md); border-radius: 10px; flex-shrink: 0;
+        padding: 1px 6px; border-radius: 10px; flex-shrink: 0; font-variant-numeric: tabular-nums;
       }
-      .annota-topbar-exit {
+      .annota-chip-done {
         background: var(--annota-surface-elevated); color: var(--annota-text); border: 1px solid var(--annota-border);
-        padding: var(--annota-space-xs) var(--annota-space-lg); border-radius: var(--annota-radius-xs); cursor: pointer; font: inherit; font-size: var(--annota-font-size-sm);
+        padding: 2px 10px; border-radius: var(--annota-radius-xs); cursor: pointer;
+        font: inherit; font-size: var(--annota-font-size-xs); font-weight: 500;
+        transition: background 150ms ease;
       }
-      .annota-topbar-exit:hover { background: var(--annota-surface-hover); }
-      .annota-topbar-exit:focus-visible { outline: 2px solid var(--annota-accent); outline-offset: 2px; }
+      .annota-chip-done:hover { background: var(--annota-surface-hover); }
+      .annota-chip-done:focus-visible { outline: 2px solid var(--annota-accent); outline-offset: 2px; }
       .annota-highlight {
         position: fixed; z-index: ${MAX_Z}; pointer-events: none;
         border: 2px solid var(--annota-accent); background: var(--annota-accent-tint);
@@ -165,7 +178,9 @@
       .annota-btn {
         padding: var(--annota-space-sm) 14px; border: none; border-radius: var(--annota-radius-sm);
         font: inherit; font-size: var(--annota-font-size-sm); font-weight: 500; cursor: pointer;
+        transition: background 150ms ease, transform 80ms ease;
       }
+      .annota-btn:active { transform: translateY(1px); }
       .annota-btn:focus-visible { outline: 2px solid var(--annota-accent); outline-offset: 2px; }
       .annota-btn-primary { background: var(--annota-accent); color: var(--annota-text-inverted); }
       .annota-btn-primary:hover { background: var(--annota-accent-hover); }
@@ -202,7 +217,7 @@
       if (!document.documentElement.contains(state.shadowHost)) {
         createShadowDOM();
         badgeRenderer.renderBadges();
-        if (state.pickMode) showTopBar();
+        if (state.pickMode) showChip();
       }
     });
     observer.observe(document.documentElement, { childList: true });
@@ -222,19 +237,19 @@
     }, 3000);
   }
 
-  // ── Top Bar ──
+  // ── Chip ──
 
-  function showTopBar() {
-    state.topBar.style.display = 'flex';
-    updateTopBarCount();
+  function showChip() {
+    state.chip.style.display = 'flex';
+    updateChipCount();
   }
 
-  function hideTopBar() {
-    state.topBar.style.display = 'none';
+  function hideChip() {
+    state.chip.style.display = 'none';
   }
 
-  function updateTopBarCount() {
-    const countEl = state.topBar.querySelector('.annota-topbar-count');
+  function updateChipCount() {
+    const countEl = state.chip.querySelector('.annota-chip-count');
     if (state.annotations.length > 0) {
       countEl.textContent = state.annotations.length;
       countEl.style.display = '';
@@ -244,9 +259,9 @@
   }
 
   function syncUI() {
-    updateTopBarCount();
+    updateChipCount();
     badgeRenderer.renderBadges();
-    ChromeAdapters.messaging.sendToBackground({ type: 'ANNOTATIONS_CHANGED' });
+    safeSendToBackground({ type: 'ANNOTATIONS_CHANGED' });
   }
 
   // ── Metadata Extraction ──
@@ -330,7 +345,7 @@
       .replace(/>/g, '&gt;');
   }
 
-  // ── Pick Mode ──
+  // ── Design Mode ──
 
   function isInsideShadowEvent(e) {
     if (!e) return false;
@@ -338,28 +353,19 @@
     return path.includes(state.shadowRoot) || path.includes(state.shadowHost);
   }
 
-  function isInsideShadow(el) {
-    if (!el) return false;
-    if (el === state.shadowHost) return true;
-    try {
-      return el.getRootNode() === state.shadowRoot;
-    } catch {
-      return false;
-    }
-  }
-
   function startPick() {
     if (state.pickMode) return;
     state.pickMode = true;
-    showTopBar();
+    showChip();
     const style = document.createElement('style');
     style.id = '__annota-pick-cursor__';
     style.textContent = '*,*::before,*::after{cursor:crosshair!important}';
     document.head.appendChild(style);
     document.addEventListener('mouseover', onMouseOver, true);
     document.addEventListener('click', onClickCapture, true);
-    document.addEventListener('keydown', onKeyDown, true);
-    ChromeAdapters.messaging.sendToBackground({ type: 'PICK_MODE_CHANGED', pickMode: true });
+    window.addEventListener('scroll', updateHoverHighlight, { passive: true });
+    window.addEventListener('resize', updateHoverHighlight, { passive: true });
+    safeSendToBackground({ type: 'PICK_MODE_CHANGED', pickMode: true });
   }
 
   function stopPick() {
@@ -368,12 +374,32 @@
     const style = document.getElementById('__annota-pick-cursor__');
     if (style) style.remove();
     state.currentTarget = null;
-    hideTopBar();
+    hideChip();
     state.hoverHighlight.style.display = 'none';
     document.removeEventListener('mouseover', onMouseOver, true);
     document.removeEventListener('click', onClickCapture, true);
-    document.removeEventListener('keydown', onKeyDown, true);
-    ChromeAdapters.messaging.sendToBackground({ type: 'PICK_MODE_CHANGED', pickMode: false });
+    window.removeEventListener('scroll', updateHoverHighlight);
+    window.removeEventListener('resize', updateHoverHighlight);
+    safeSendToBackground({ type: 'PICK_MODE_CHANGED', pickMode: false });
+  }
+
+  function updateHoverHighlight() {
+    const el = state.currentTarget;
+    if (!el || !document.documentElement.contains(el)) {
+      state.hoverHighlight.style.display = 'none';
+      state.currentTarget = null;
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      state.hoverHighlight.style.display = 'none';
+      return;
+    }
+    state.hoverHighlight.style.display = 'block';
+    state.hoverHighlight.style.top = rect.top + 'px';
+    state.hoverHighlight.style.left = rect.left + 'px';
+    state.hoverHighlight.style.width = rect.width + 'px';
+    state.hoverHighlight.style.height = rect.height + 'px';
   }
 
   function onMouseOver(e) {
@@ -385,12 +411,7 @@
       return;
     }
     state.currentTarget = normalized;
-    const rect = normalized.getBoundingClientRect();
-    state.hoverHighlight.style.display = 'block';
-    state.hoverHighlight.style.top = rect.top + 'px';
-    state.hoverHighlight.style.left = rect.left + 'px';
-    state.hoverHighlight.style.width = rect.width + 'px';
-    state.hoverHighlight.style.height = rect.height + 'px';
+    updateHoverHighlight();
   }
 
   function onClickCapture(e) {
@@ -405,7 +426,8 @@
     e.stopPropagation();
     e.stopImmediatePropagation();
 
-    const normalized = state.currentTarget || normalizeTarget(e.target);
+    const clickTarget = normalizeTarget(e.target);
+    const normalized = clickTarget || state.currentTarget;
     if (!normalized || normalized === document.body || normalized === document.documentElement) return;
 
     const existing = annotationStore.findAnnotationForElement(normalized);
@@ -413,18 +435,6 @@
       popoverManager.openExistingPopover(existing, e.clientX, e.clientY);
     } else {
       popoverManager.openNewPopover(normalized, e.clientX, e.clientY);
-    }
-  }
-
-  function onKeyDown(e) {
-    if (e.key === 'Escape') {
-      if (state.popover.style.display !== 'none') {
-        popoverManager.closePopover();
-      } else if (state.pickMode) {
-        stopPick();
-      }
-      e.preventDefault();
-      e.stopPropagation();
     }
   }
 
@@ -451,8 +461,47 @@
   async function loadAnnotations() {
     computePageKey();
     await annotationStore.loadAnnotations();
-    updateTopBarCount();
+    updateChipCount();
     badgeRenderer.renderBadges();
+  }
+
+  // ── Chip Drag ──
+
+  function setupChipDrag(chip) {
+    let dragging = false;
+    let startX, startY, origX, origY;
+
+    chip.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      if (e.target.closest('.annota-chip-done')) return;
+      dragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      const rect = chip.getBoundingClientRect();
+      origX = rect.left;
+      origY = rect.top;
+      chip.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    chip.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      let newX = origX + dx;
+      let newY = origY + dy;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const rect = chip.getBoundingClientRect();
+      newX = Math.max(0, Math.min(newX, vw - rect.width));
+      newY = Math.max(0, Math.min(newY, vh - rect.height));
+      chip.style.left = newX + 'px';
+      chip.style.top = newY + 'px';
+      chip.style.right = 'auto';
+    });
+
+    chip.addEventListener('pointerup', () => { dragging = false; });
+    chip.addEventListener('pointercancel', () => { dragging = false; });
   }
 
   // ── Init ──
@@ -501,7 +550,7 @@
       retryMap: state.retryMap,
       deleteAnnotations: (ids) => annotationStore.deleteAnnotationsByIds(ids),
       onStaleRemoved: (count) => {
-        updateTopBarCount();
+        updateChipCount();
         badgeRenderer.renderBadges();
         showNotice(`Removed ${count} stale feedback item${count !== 1 ? 's' : ''}.`);
       },
@@ -518,7 +567,7 @@
         state.retryMap.clear();
         loadAnnotations().then(() => {
           setTimeout(() => staleValidator.validateCurrentPageAnnotations(), window.RETRY_MS);
-        });
+        }).catch(() => {});
       },
     });
 
@@ -540,7 +589,7 @@
 
     ChromeAdapters.storage.onChanged((pageKey, newList) => {
       if (_selfWritePending > 0) { _selfWritePending--; return; }
-      loadAnnotations().then(() => staleValidator.validateCurrentPageAnnotations());
+      loadAnnotations().then(() => staleValidator.validateCurrentPageAnnotations()).catch(() => {});
     });
 
     window.addEventListener('scroll', badgeRenderer.repositionBadges, { passive: true });

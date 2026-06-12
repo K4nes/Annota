@@ -1,6 +1,6 @@
 # Annota
 
-Pick DOM elements on localhost pages, attach feedback notes, and copy as structured Markdown for AI coding agents.
+Select DOM elements on localhost pages, attach feedback notes, and copy as structured Markdown for AI coding agents.
 
 ## Overview
 
@@ -10,8 +10,8 @@ No accounts, no backend, no screenshots. Every annotation lives in `chrome.stora
 
 ## Features
 
-- **Pick Mode** — Crosshair cursor, hover highlight, page clicks intercepted
-- **Feedback Popover** — Single-row textarea grows on Enter, `×` closes
+- **Design Mode** — Hover highlight, page clicks intercepted, draggable status chip
+- **Feedback Popover** — Single-row textarea grows on Enter, Cancel button to dismiss
 - **Numbered Badges** — Dots anchored to annotated elements; click to view, replace, or delete
 - **Per-item Copy** — Clipboard icon next to each annotation in the popup (transitions to checkmark)
 - **Batch Copy** — Export all annotations as structured Markdown in one click
@@ -24,8 +24,8 @@ No accounts, no backend, no screenshots. Every annotation lives in `chrome.stora
 1. Open `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select the `annota/` directory.
 2. Go to any page on `http://localhost:*` or `http://127.0.0.1:*`.
 3. Click the Annota toolbar icon → **Add feedback**.
-4. The crosshair cursor shows pick mode is active. Click any element.
-5. Type your note, press `×` to close when done. Repeat.
+4. Design mode is active. Click any element.
+5. Type your note, press Cancel or Save. Repeat.
 6. Click **Copy all** in the popup for the full Markdown report, or click the clipboard icon next to a single annotation.
 
 ## Usage
@@ -69,7 +69,7 @@ Extension Storage            ← one annotation array per Page Key
 |---------|-------------|
 | **Annotation** | `id`, `selector`, `locatorHint`, `tag`, `elementSnippet`, `text`, `feedback`, `viewport`, `fingerprint`, `createdAt`, `pageKey` |
 | **Page Key** | `annotations::${origin}${pathname}${hash}` — includes hash for SPA routing |
-| **Selector** | Priority: `data-testid` → `aria-label` → unique `id` → semantic class → `:nth-of-type` path |
+| **Selector** | Priority: `data-testid` / `data-cy` → `aria-label` / role + accessible name → unique `id` → semantic class → `:nth-of-type` path |
 | **Fingerprint** | `{ tagName, text, childCount }` captured at annotate time, used for staleness detection |
 | **Locator Hint** | Human-readable anchor (`data-testid`, `aria-label`, etc.) included in Markdown export |
 
