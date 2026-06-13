@@ -8,6 +8,8 @@ Annota is a desktop Chromium extension (Manifest V3) for collecting structured U
 
 No accounts, no backend, no screenshots. Every annotation lives in `chrome.storage.local` and is discarded when done.
 
+<video src="https://pub-1c2774d8fbf04cd99abcc0296c6bcc6c.r2.dev/demo/AnnotaDemo-1781343466235.mov" controls width="100%"></video>
+
 ## Features
 
 - **Design Mode** — Hover highlight, page clicks intercepted, draggable status chip
